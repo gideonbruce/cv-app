@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img_lib;
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+import 'dart:io';
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({Key? key}) : super(key: key);
+  const CameraScreen({super.key});
 
   @override
-  _CameraScreenState createState() => _CameraScreenState();
+  State<CameraScreen> createState() => _CameraScreenState();
 }
 
 class _CameraScreenState extends State<CameraScreen> {
@@ -17,11 +20,12 @@ class _CameraScreenState extends State<CameraScreen> {
   late Interpreter _interpreter;
   bool _isBusy = false;
   List<dynamic> _detections = [];
+  bool _isCapturing = false;
 
   // YOLO model configurations
   final modelPath = 'assets/weed_detection.tflite';
-  final labels = ['weed']; // Add your model's labels here
-  final inputSize = 416; // YOLO typical input size
+  final labels = ['weed'];
+  final inputSize = 416;
   final confidenceThreshold = 0.5;
 
   @override
@@ -35,9 +39,9 @@ class _CameraScreenState extends State<CameraScreen> {
     try {
       final options = InterpreterOptions();
       _interpreter = await Interpreter.fromAsset(modelPath, options: options);
-      print('Model loaded successfully');
+      debugPrint('Model loaded successfully');
     } catch (e) {
-      print('Error loading model: $e');
+      debugPrint('Error loading model: $e');
     }
   }
 
@@ -66,7 +70,7 @@ class _CameraScreenState extends State<CameraScreen> {
         await _controller!.startImageStream(_processCameraImage);
       }
     } catch (e) {
-      print('Error initializing camera: $e');
+      debugPrint('Error initializing camera: $e');
     }
   }
 
@@ -82,36 +86,29 @@ class _CameraScreenState extends State<CameraScreen> {
         });
       }
     } catch (e) {
-      print('Error processing image: $e');
+      debugPrint('Error processing image: $e');
     }
 
     _isBusy = false;
   }
 
   Future<List<Map<String, dynamic>>> _detectWeeds(CameraImage image) async {
-    // Convert CameraImage to input tensor format
     final inputArray = await _preProcessImage(image);
 
-    // Output tensor shapes for YOLO
     final outputShape = _interpreter.getOutputTensor(0).shape;
     final outputBuffer = List<double>.filled(outputShape.reduce((a, b) => a * b), 0);
 
-    // Run inference
     final inputs = [inputArray];
     final outputs = [outputBuffer];
 
     _interpreter.run(inputs, outputs);
 
-    // Process results
     return _postProcessResults(outputs[0]);
   }
 
   Future<List<double>> _preProcessImage(CameraImage image) async {
-    // Convert camera image to normalized float array
-    // This is a simplified version - you'll need to adjust based on your model's requirements
     final inputArray = List<double>.filled(inputSize * inputSize * 3, 0);
 
-    // Convert YUV to RGB and normalize
     final bytes = image.planes[0].bytes;
     final stride = image.planes[0].bytesPerRow;
 
@@ -129,9 +126,7 @@ class _CameraScreenState extends State<CameraScreen> {
   List<Map<String, dynamic>> _postProcessResults(List<double> outputs) {
     final List<Map<String, dynamic>> detections = [];
 
-    // Process YOLO outputs to get bounding boxes
-    // This is a simplified version - adjust based on your model's output format
-    for (var i = 0; i < outputs.length; i += 85) { // Assuming YOLO format with 85 values per detection
+    for (var i = 0; i < outputs.length; i += 85) {
       final confidence = outputs[i + 4];
       if (confidence >= confidenceThreshold) {
         final x = outputs[i];
@@ -150,6 +145,70 @@ class _CameraScreenState extends State<CameraScreen> {
     return detections;
   }
 
+  Future<void> _captureAndSaveImage() async {
+    if (_isCapturing || _controller == null || !_controller!.value.isInitialized) {
+      return;
+    }
+
+    setState(() {
+      _isCapturing = true;
+    });
+
+    try {
+      final XFile image = await _controller!.takePicture();
+
+      if (_detections.isNotEmpty) {
+        final directory = await getApplicationDocumentsDirectory();
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+        final weedDirectory = Directory('${directory.path}/weed_images');
+        if (!await weedDirectory.exists()) {
+          await weedDirectory.create();
+        }
+
+        final String imagePath = path.join(weedDirectory.path, 'weed_$timestamp.jpg');
+        await File(image.path).copy(imagePath);
+
+        final metadataPath = path.join(weedDirectory.path, 'weed_${timestamp}_metadata.json');
+        await File(metadataPath).writeAsString('''
+        {
+          "timestamp": "$timestamp",
+          "detections": ${_detections.map((d) => {
+          "confidence": d['confidence'],
+          "box": d['box'],
+          "label": d['label']
+        }).toList()}
+        }
+        ''');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Saved: ${path.basename(imagePath)}'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error capturing image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error saving image'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCapturing = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _controller?.dispose();
@@ -160,38 +219,80 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Weed Detection')),
       body: SafeArea(
         child: Stack(
           children: [
+            // Camera Preview
             CameraPreview(_controller!),
+
+            // Bounding Boxes
             CustomPaint(
               painter: BoundingBoxPainter(
-                detectedObjects: _detections,
+                detections: _detections,
                 previewSize: Size(
                   _controller!.value.previewSize!.height,
                   _controller!.value.previewSize!.width,
                 ),
               ),
             ),
+
+            // Top Bar
             Positioned(
-              bottom: 20,
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                color: Colors.black45,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    Text(
+                      '${_detections.length} weeds detected',
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.folder, color: Colors.white),
+                      onPressed: () {
+                        // TODO: Navigate to gallery
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Capture Button
+            Positioned(
+              bottom: 32,
               left: 0,
               right: 0,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.camera),
-                    color: Colors.white,
-                    onPressed: () {
-                      // TODO: Implement capture functionality
-                    },
-                  ),
+                  if (_isCapturing)
+                    const CircularProgressIndicator(color: Colors.white)
+                  else
+                    FloatingActionButton(
+                      onPressed: _detections.isNotEmpty ? _captureAndSaveImage : null,
+                      backgroundColor: _detections.isNotEmpty ? Colors.white : Colors.grey,
+                      child: Icon(
+                        Icons.camera,
+                        color: _detections.isNotEmpty ? Colors.black : Colors.white,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -203,11 +304,11 @@ class _CameraScreenState extends State<CameraScreen> {
 }
 
 class BoundingBoxPainter extends CustomPainter {
-  final List<dynamic> detectedObjects;
+  final List<dynamic> detections;
   final Size previewSize;
 
   BoundingBoxPainter({
-    required this.detectedObjects,
+    required this.detections,
     required this.previewSize,
   });
 
@@ -218,7 +319,7 @@ class BoundingBoxPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
-    for (final detection in detectedObjects) {
+    for (final detection in detections) {
       final box = detection['box'] as List<double>;
       final rect = Rect.fromLTWH(
         box[0] * size.width,
@@ -229,11 +330,14 @@ class BoundingBoxPainter extends CustomPainter {
 
       canvas.drawRect(rect, paint);
 
-      // Draw label
       final textPainter = TextPainter(
         text: TextSpan(
           text: '${detection['label']} ${(detection['confidence'] * 100).toStringAsFixed(0)}%',
-          style: const TextStyle(color: Colors.green, fontSize: 12),
+          style: const TextStyle(
+            color: Colors.green,
+            fontSize: 12,
+            backgroundColor: Colors.black54,
+          ),
         ),
         textDirection: TextDirection.ltr,
       );
