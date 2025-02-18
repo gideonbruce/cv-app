@@ -42,9 +42,6 @@ class _CameraScreenState extends State<CameraScreen> {
     _loadModel();
   }
 
-  Future<void> _initializeCamera() async {
-    
-  }
 
   Future<void> _loadModel() async {
     try {
@@ -76,6 +73,11 @@ class _CameraScreenState extends State<CameraScreen> {
       if (mounted) {
         setState(() {
           _isInitialized = true;
+          previewSize = Size(
+            _controller!.value.previewSize!.height,
+            _controller!.value.previewSize!.width,
+          );
+          previewRatio = previewSize!.width / previewSize!.height;
         });
 
         await _controller!.startImageStream(_processCameraImage);
@@ -84,6 +86,8 @@ class _CameraScreenState extends State<CameraScreen> {
       debugPrint('Error initializing camera: $e');
     }
   }
+
+  // Method to transform coordinates
 
   Future<void> _processCameraImage(CameraImage image) async {
     if (_isBusy) return;
