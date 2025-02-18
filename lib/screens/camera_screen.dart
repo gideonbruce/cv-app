@@ -22,6 +22,13 @@ class _CameraScreenState extends State<CameraScreen> {
   List<dynamic> _detections = [];
   bool _isCapturing = false;
 
+  // Coordinate transformation
+  Size? previewSize;
+  double? previewRatio;
+  Size? screenSize;
+  double? screenRatio;
+  bool isLandscape = false;
+
   // YOLO model configurations
   final modelPath = 'assets/weed_detection.tflite';
   final labels = ['weed'];
@@ -33,6 +40,10 @@ class _CameraScreenState extends State<CameraScreen> {
     super.initState();
     _initializeCamera();
     _loadModel();
+  }
+
+  Future<void> _initializeCamera() async {
+    
   }
 
   Future<void> _loadModel() async {
