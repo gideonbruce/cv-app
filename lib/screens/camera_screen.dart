@@ -269,20 +269,29 @@ class _CameraScreenState extends State<CameraScreen> {
     return Scaffold(
       body: SafeArea(
         child: Stack(
+          fit: StackFit.expand,
           children: [
             // Camera Preview
-            CameraPreview(_controller!),
-
-            // Bounding Boxes
-            CustomPaint(
-              painter: BoundingBoxPainter(
-                detections: _detections,
-                previewSize: Size(
-                  _controller!.value.previewSize!.height,
-                  _controller!.value.previewSize!.width,
-                ),
-              ),
+            AspectRatio(
+              aspectRatio: _controller!.value.aspectRatio,
+              child: CameraPreview(_controller!),
             ),
+
+            // bounding box overlay
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return CustomPaint(
+                  size: Size(constraints.maxWidth, constraints.maxHeight),
+                  painter: BoundingBoxPainter(
+                    detections: _detections,
+                    previewSize: Size(constraints.maxWidth, constraints.maxHeight),
+                    isLandscape: isLandscape,
+                    transformBoundingBox: _transformBoundingBox,
+                  ),
+                );
+              },
+            ),
+
 
             // Top Bar
             Positioned(
@@ -346,10 +355,14 @@ class _CameraScreenState extends State<CameraScreen> {
 class BoundingBoxPainter extends CustomPainter {
   final List<dynamic> detections;
   final Size previewSize;
+  final bool isLandscape;
+  final Function(List<double>, Size) transformBoundingBox;
 
   BoundingBoxPainter({
     required this.detections,
     required this.previewSize,
+    required this.isLandscape,
+    required this.transformBoundingBox,
   });
 
   @override
@@ -359,33 +372,63 @@ class BoundingBoxPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
+    final labelPaint = Paint()
+      ..color = Colors.black.withOpacity(0.5)
+      ..style = PaintingStyle.fill;
+
     for (final detection in detections) {
       final box = detection['box'] as List<double>;
-      final rect = Rect.fromLTWH(
-        box[0] * size.width,
-        box[1] * size.height,
-        box[2] * size.width,
-        box[3] * size.height,
-      );
+      final confidence = detection['confidence'] as double;
+      final label = detection['label'] as String;
+      //final rect = Rect.fromLTWH(
+      //box[0] * size.width,
+      //box[1] * size.height,
+      //box[2] * size.width,
+      //box[3] * size.height,
+      //);
 
+      final rect = transformBoundingBox(box, size);
+
+      //draw bounding box
       canvas.drawRect(rect, paint);
 
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: '${detection['label']} ${(detection['confidence'] * 100).toStringAsFixed(0)}%',
-          style: const TextStyle(
-            color: Colors.green,
-            fontSize: 12,
-            backgroundColor: Colors.black54,
-          ),
+      // draw label background
+      final labelText = '$label ${(confidence * 100).toStringAsFixed(0)}%';
+      final textSpan = TextSpan(
+        text: labelText,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
         ),
+      );
+
+      final textPainter = TextPainter(
+        text: textSpan,
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
-      textPainter.paint(canvas, rect.topLeft);
+
+      //draw label background
+      final labelRect = Rect.fromLTWH(
+        rect.left,
+        rect.top - 22,
+        textPainter.width + 8,
+        22,
+      );
+      canvas.drawRect(labelRect, labelPaint);
+
+      //draw label text
+      textPainter.paint(
+        canvas,
+        Offset(rect.left + 4, rect.top - 20),
+      );
     }
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => true;
+  bool shouldRepaint(BoundingBoxPainter oldDelegate) =>
+      detections != oldDelegate.detections;
+
 }
+
