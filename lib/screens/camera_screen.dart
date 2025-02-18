@@ -88,6 +88,26 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   // Method to transform coordinates
+  Rect _transformBoundingBox(List<double> box, Size size) {
+    //converting normalized coordinates to actual coordinates
+    final double x = box[0] * size.width;
+    final double y = box[1] * size.height;
+    final double w = box[2] * size.width;
+    final double h = box[3] * size.height;
+
+    //adjusting screen orientation and aspect ratio
+    if (isLandscape) {
+      return Rect.fromLTWH(x, y, w, h);
+    } else {
+      //for portrait swap coordinates
+      return Rect.fromLTWH(
+        size.width - (y + h),  //adjusting x coordinate
+        x,      //use original x as y
+        h,     //swap width and height
+        w,
+      );
+    }
+  }
 
   Future<void> _processCameraImage(CameraImage image) async {
     if (_isBusy) return;
@@ -240,6 +260,11 @@ class _CameraScreenState extends State<CameraScreen> {
         ),
       );
     }
+
+    //get screen size and update ratios
+    screenSize = MediaQuery.of(context).size;
+    screenRatio = screenSize!.width / screenSize!.height;
+    isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Scaffold(
       body: SafeArea(
