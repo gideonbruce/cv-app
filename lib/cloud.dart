@@ -103,9 +103,9 @@ class _CameraScreenState extends State<CameraScreen> {
 
   List<int> _convertYUV420toRGB(CameraImage image) {
     final img = img_lib.Image.fromBytes(
-      image.width,
-      image.height,
-      image.planes[0].bytes,
+      width: image.width,
+      height: image.height,
+      bytes: image.planes[0].bytes,
       format: img_lib.Format.rgb,
     );
 
