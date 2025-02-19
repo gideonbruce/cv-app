@@ -25,7 +25,7 @@ class _CameraScreenState extends State<CameraScreen> {
   Size? previewSize;
   double? previewRatio;
 
-  final cloudinary = CloudinaryPublic('your_cloud_name', 'your_upload_preset', cache: false);
+  final cloudinary = CloudinaryPublic('daq0tdpcm', 'flutterr', cache: false);
 
   @override
   void initState() {
