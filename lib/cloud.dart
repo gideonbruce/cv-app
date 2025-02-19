@@ -22,6 +22,8 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _isBusy = false;
   List<dynamic> _detections = [];
   bool _isCapturing = false;
+  Size? previewSize;
+  double? previewRatio;
 
   final cloudinary = CloudinaryPublic('your_cloud_name', 'your_upload_preset', cache: false);
 
@@ -30,6 +32,84 @@ class _CameraScreenState extends State<CameraScreen> {
     super.initState();
     _initializeCamera();
     _loadModel();
+  }
+
+  Future<void> _loadModel() async {
+    try {
+      _interpreter = await Interpreter.fromAsset('assets/model.tflite');
+      debugPrint("Model loaded successfully");
+    } catch (e) {
+      debugPrint("Error loading model: $e");
+    }
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      cameras = await availableCameras();
+      final backCamera = cameras.firstWhere(
+            (camera) => camera.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+
+      _controller = CameraController(
+        backCamera,
+        ResolutionPreset.high,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.bgra8888,
+      );
+
+      await _controller!.initialize();
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+          previewSize = Size(
+            _controller!.value.previewSize!.height,
+            _controller!.value.previewSize!.width,
+          );
+          previewRatio = previewSize!.width / previewSize!.height;
+        });
+
+        await _controller!.startImageStream(_processCameraImage);
+      }
+    } catch (e) {
+      debugPrint('Error initializing camera: $e');
+    }
+  }
+
+  void _processCameraImage(CameraImage image) {
+    if (_isBusy) return;
+    _isBusy = true;
+
+    try {
+      // Convert CameraImage to a format usable by TFLite
+      List<int> imageBytes = _convertYUV420toRGB(image);
+
+      // Run inference
+      var input = [imageBytes]; // Adjust based on your model input
+      var output = List.filled(1 * 10, 0).reshape([1, 10]); // Adjust based on model output
+
+      _interpreter.run(input, output);
+
+      setState(() {
+        _detections = output;
+      });
+    } catch (e) {
+      debugPrint("Error processing image: $e");
+    } finally {
+      _isBusy = false;
+    }
+  }
+
+  List<int> _convertYUV420toRGB(CameraImage image) {
+    final img = img_lib.Image.fromBytes(
+      image.width,
+      image.height,
+      image.planes[0].bytes,
+      format: img_lib.Format.rgb,
+    );
+
+    return img.getBytes();
   }
 
   Future<void> _captureAndSaveImage() async {

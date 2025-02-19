@@ -43,15 +43,24 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
 
+  //Future<void> _loadModel() async {
+   // try {
+      //final options = InterpreterOptions();
+      //_interpreter = await Interpreter.fromAsset(modelPath, options: options);
+      //debugPrint('Model loaded successfully');
+    //} catch (e) {
+      //debugPrint('Error loading model: $e');
+    //}
+  //}
   Future<void> _loadModel() async {
     try {
-      final options = InterpreterOptions();
-      _interpreter = await Interpreter.fromAsset(modelPath, options: options);
-      debugPrint('Model loaded successfully');
+      _interpreter = await Interpreter.fromAsset('model.tflite');
+      debugPrint("Model loaded successfully");
     } catch (e) {
-      debugPrint('Error loading model: $e');
+      debugPrint("Error loading model: $e");
     }
   }
+
 
   Future<void> _initializeCamera() async {
     try {
