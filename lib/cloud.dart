@@ -102,15 +102,24 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   List<int> _convertYUV420toRGB(CameraImage image) {
-    final img = img_lib.Image.fromBytes(
-      width: image.width,
-      height: image.height,
-      bytes: image.planes[0].bytes,
-      format: img_lib.Format.rgb,
-    );
+    final int width = image.width;
+    final int height = image.height;
+    final img_lib.Image img = img_lib.Image(width, height);
+
+    Plane plane = image.planes[0]; // Y Plane (Luminance)
+    List<int> bytes = plane.bytes;
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        int pixelIndex = y * width + x;
+        int luminance = bytes[pixelIndex]; // Grayscale approximation
+        img.setPixelRgba(x, y, luminance, luminance, luminance, 255);
+      }
+    }
 
     return img.getBytes();
   }
+
 
   Future<void> _captureAndSaveImage() async {
     if (_isCapturing || _controller == null || !_controller!.value.isInitialized) {
