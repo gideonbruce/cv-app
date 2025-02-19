@@ -30,7 +30,7 @@ class _CameraScreenState extends State<CameraScreen> {
   bool isLandscape = false;
 
   // YOLO model configurations
-  final modelPath = 'assets/weed_detection.tflite';
+  final modelPath = 'assets/best.tflite';
   final labels = ['weed'];
   final inputSize = 416;
   final confidenceThreshold = 0.5;
