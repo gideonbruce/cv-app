@@ -104,7 +104,7 @@ class _CameraScreenState extends State<CameraScreen> {
   List<int> _convertYUV420toRGB(CameraImage image) {
     final int width = image.width;
     final int height = image.height;
-    final img_lib.Image img = img_lib.Image(width, height);
+    final img_lib.Image img = img_lib.Image(width: width, height: height);
 
     Plane plane = image.planes[0]; // Y Plane (Luminance)
     List<int> bytes = plane.bytes;
