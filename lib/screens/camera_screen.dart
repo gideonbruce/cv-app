@@ -324,6 +324,10 @@ class _CameraScreenState extends State<CameraScreen> {
                     IconButton(
                       icon: const Icon(Icons.folder, color: Colors.white),
                       onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => GalleryScreen()),
+                        );
                         // TODO: Navigate to gallery
                       },
                     ),
