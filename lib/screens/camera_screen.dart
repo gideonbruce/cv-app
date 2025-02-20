@@ -214,22 +214,29 @@ class _CameraScreenState extends State<CameraScreen> {
         final String imagePath = path.join(weedDirectory.path, 'weed_$timestamp.jpg');
         await File(image.path).copy(imagePath);
 
+        // 🔹 Upload Image to Cloudinary
+        CloudinaryResponse response = await cloudinary.uploadFile(
+          CloudinaryFile.fromFile(imagePath, resourceType: CloudinaryResourceType.Image),
+        );
+
+        // 🔹 Save Metadata with Cloudinary URL
         final metadataPath = path.join(weedDirectory.path, 'weed_${timestamp}_metadata.json');
         await File(metadataPath).writeAsString('''
-        {
-          "timestamp": "$timestamp",
-          "detections": ${_detections.map((d) => {
+      {
+        "timestamp": "$timestamp",
+        "cloudinary_url": "${response.secureUrl}",
+        "detections": ${_detections.map((d) => {
           "confidence": d['confidence'],
           "box": d['box'],
           "label": d['label']
         }).toList()}
-        }
-        ''');
+      }
+      ''');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Saved: ${path.basename(imagePath)}'),
+              content: Text('Uploaded & Saved: ${path.basename(imagePath)}'),
               duration: const Duration(seconds: 2),
             ),
           );
@@ -240,7 +247,7 @@ class _CameraScreenState extends State<CameraScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Error saving image'),
+            content: Text('Error saving/uploading image'),
             duration: Duration(seconds: 2),
           ),
         );
@@ -253,6 +260,7 @@ class _CameraScreenState extends State<CameraScreen> {
       }
     }
   }
+
 
   @override
   void dispose() {
