@@ -5,6 +5,7 @@ import 'package:image/image.dart' as img_lib;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'dart:io';
+import 'package:computer_vision_app/gallery_screen.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
