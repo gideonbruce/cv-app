@@ -1,3 +1,4 @@
+import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -22,6 +23,8 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _isBusy = false;
   List<dynamic> _detections = [];
   bool _isCapturing = false;
+  final cloudinary = CloudinaryPublic('daq0tdpcm', 'flutterr', cache: false);
+
 
   // Coordinate transformation
   Size? previewSize;
