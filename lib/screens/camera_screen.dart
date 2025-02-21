@@ -37,7 +37,7 @@ class _CameraScreenState extends State<CameraScreen> {
   final modelPath = 'assets/best.tflite';
   final labels = ['weed'];
   final inputSize = 416;
-  final confidenceThreshold = 0.5;
+  final confidenceThreshold = 0.005;
 
   @override
   void initState() {
@@ -58,7 +58,7 @@ class _CameraScreenState extends State<CameraScreen> {
   //}
   Future<void> _loadModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('model.tflite');
+      _interpreter = await Interpreter.fromAsset('best.tflite');
       debugPrint("Model loaded successfully");
     } catch (e) {
       debugPrint("Error loading model: $e");
@@ -456,4 +456,6 @@ class BoundingBoxPainter extends CustomPainter {
       detections != oldDelegate.detections;
 
 }
+
+
 

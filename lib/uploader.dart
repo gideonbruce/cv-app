@@ -3,12 +3,12 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class CloudinaryService {
-  static const String cloudName = "your_cloud_name";
-  static const String apiKey = "your_api_key";
-  static const String apiSecret = "your_api_secret";
+  static const String cloudName = "daq0tdpcm";
+  static const String apiKey = "856251836494621";
+  static const String apiSecret = "-GnDyhLxduB99DUChiR8z207ZCQ";
 
   static Future<String?> uploadImage(File imageFile) async {
-    final url = "https://api.cloudinary.com/v1_1/$cloudName/image/upload";
+    final url = "https://api.cloudinary.com/v1_1/$daq0tdpcm/image/upload";
 
     final request = http.MultipartRequest('POST', Uri.parse(url))
       ..fields['upload_preset'] = "your_upload_preset"
