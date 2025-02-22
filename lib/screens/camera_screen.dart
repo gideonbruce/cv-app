@@ -154,8 +154,13 @@ class _CameraScreenState extends State<CameraScreen> {
     return _postProcessResults(outputs[0]);
   }
 
-  Future<List<double>> _preProcessImage(CameraImage image) async {
-    final inputArray = List<double>.filled(inputSize * inputSize * 3, 0);
+  Future<List<List<List<List<double>>>>> _preProcessImage(CameraImage image) async {
+    final inputSize = 640;
+    final inputArray = List.generate(inputSize, (_) =>
+        List.generate(inputSize, (_) =>
+            List.generate(3, (_) => 0.0)
+        )
+    );
 
     final bytes = image.planes[0].bytes;
     final stride = image.planes[0].bytesPerRow;
@@ -163,6 +168,10 @@ class _CameraScreenState extends State<CameraScreen> {
     for (int y = 0; y < image.height; y++) {
       for (int x = 0; x < image.width; x++) {
         final pixel = bytes[y * stride + x];
+        final r = (pixel & 0xFF0000) >> 16;
+        final g = (pixel & 0x00FF00) >> 8;
+        final b = (pixel & 0x0000FF);
+
         final index = (y * inputSize + x) * 3;
         inputArray[index] = pixel / 255.0;
       }
