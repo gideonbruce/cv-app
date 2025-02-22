@@ -175,13 +175,11 @@ class _CameraScreenState extends State<CameraScreen> {
     final List<Map<String, dynamic>> detections = [];
     final int numDetections = outputs.length ~/ 7;
 
-    for (var i = 0; i < outputs.length; i += 85) {
-      final confidence = outputs[i + 4];
-      if (confidence >= confidenceThreshold) {
+    for (int i = 0; i < numDetections; i++) {
+      final double xCenter = outputs[i + 7];
+      final double confidence = outputs[i * 7 + 4];
+      if (confidence > 0.01) {
         final x = outputs[i];
-        final y = outputs[i + 1];
-        final w = outputs[i + 2];
-        final h = outputs[i + 3];
 
         detections.add({
           'box': [x, y, w, h],
