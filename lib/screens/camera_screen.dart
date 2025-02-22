@@ -179,12 +179,12 @@ class _CameraScreenState extends State<CameraScreen> {
       final double xCenter = outputs[i + 7];
       final double confidence = outputs[i * 7 + 4];
       if (confidence > 0.01) {
-        final x = outputs[i];
+        final int classIndex = outputs.sublist(i * 7 + 5, i * 7 + 7).indexOf(outputs[i * 7 + 5]);
 
         detections.add({
-          'box': [x, y, w, h],
+          'box': [xCenter, yCenter, w, h],
           'confidence': confidence,
-          'label': labels[0],
+          'label': labels[classIndex],
         });
       }
     }
