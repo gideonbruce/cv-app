@@ -173,6 +173,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   List<Map<String, dynamic>> _postProcessResults(List<double> outputs) {
     final List<Map<String, dynamic>> detections = [];
+    final int numDetections = outputs.length ~/ 7;
 
     for (var i = 0; i < outputs.length; i += 85) {
       final confidence = outputs[i + 4];
