@@ -177,6 +177,9 @@ class _CameraScreenState extends State<CameraScreen> {
 
     for (int i = 0; i < numDetections; i++) {
       final double xCenter = outputs[i + 7];
+      final double yCenter = outputs[i * 7 + 1];
+      final double w = outputs[i * 7 + 2];
+      final double h = outputs[i * 7 + 3];
       final double confidence = outputs[i * 7 + 4];
       if (confidence > 0.01) {
         final int classIndex = outputs.sublist(i * 7 + 5, i * 7 + 7).indexOf(outputs[i * 7 + 5]);
