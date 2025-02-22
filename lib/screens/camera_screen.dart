@@ -102,10 +102,17 @@ void _runInference(CameraImage cameraImage) async {
 
   // Run inference
   _interpreter!.run(inputBuffer, outputBuffer);
-  print('Inference Output: $outputBuffer');
+  List<Map<String, dynamic>> detections = _postProcessResults(outputBuffer);
 
-  // Process and display results
-  _processResults(outputBuffer);
+  if (mounted) {
+    setState(() {
+      _detections = detections;
+    });
+  }
+
+  if (_detections.isNotEmpty) {
+    _captureAndSaveImage(); // Capture image if detection is found
+  }
 }
 
 class _CameraScreenState extends State<CameraScreen> {
