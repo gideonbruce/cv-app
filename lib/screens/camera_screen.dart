@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 
 import 'package:computer_vision_app/screens/gallery_screen.dart';
 
@@ -16,6 +17,26 @@ class CameraScreen extends StatefulWidget {
   @override
   State<CameraScreen> createState() => _CameraScreenState();
 }
+
+Uint8List _imageToByteBuffer(img.Image image) {
+  int width = image.width;
+  int height = image.height;
+  var buffer = Uint8List(width * height * 3); // RGB channels
+  int index = 0;
+
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      img.Pixel pixel = image.getPixel(x, y);
+
+      buffer[index++] = pixel.r.toInt();
+      buffer[index++] = pixel.g.toInt();
+      buffer[index++] = pixel.b.toInt();
+    }
+  }
+
+  return buffer;
+}
+
 
 Uint8List _convertYUV420toRGB(CameraImage image) {
   final int width = image.width;
@@ -197,22 +218,19 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
-    if (_isBusy) return;
+    if (_isBusy || !_isModelLoaded) return;
     _isBusy = true;
 
     try {
-      final detections = await _detectWeeds(image);
-      if (mounted) {
-        setState(() {
-          _detections = detections;
-        });
-      }
+      // Run inference
+      _runInference(image);
     } catch (e) {
       debugPrint('Error processing image: $e');
     }
 
     _isBusy = false;
   }
+
 
   Future<List<Map<String, dynamic>>> _detectWeeds(CameraImage image) async {
     final inputArray = await _preProcessImage(image);
