@@ -172,12 +172,17 @@ class _CameraScreenState extends State<CameraScreen> {
         final g = (pixel & 0x00FF00) >> 8;
         final b = (pixel & 0x0000FF);
 
-        final index = (y * inputSize + x) * 3;
-        inputArray[index] = pixel / 255.0;
+        final newX = (x * inputSize / image.width).toInt();
+        final newY = (y * inputSize / image.height).toInt();
+
+        inputArray[newY][newX][0] = r / 255.0;
+        inputArray[newY][newX][1] = g / 255.0;
+        inputArray[newY][newX][2] = b / 255.0;
+
       }
     }
 
-    return inputArray;
+    return [inputArray];
   }
 
   List<Map<String, dynamic>> _postProcessResults(List<double> outputs) {
