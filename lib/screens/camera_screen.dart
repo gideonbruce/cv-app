@@ -6,6 +6,8 @@ import 'package:image/image.dart' as img_lib;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:computer_vision_app/screens/gallery_screen.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -13,6 +15,76 @@ class CameraScreen extends StatefulWidget {
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
+}
+
+Uint8List _convertYUV420toRGB(CameraImage image) {
+  final int width = image.width;
+  final int height = image.height;
+  final int yRowStride = image.planes[0].bytesPerRow;
+  final int uvRowStride = image.planes[1].bytesPerRow;
+  final int uvPixelStride = image.planes[1].bytesPerPixel!;
+
+  Uint8List yBuffer = image.planes[0].bytes;
+  Uint8List uBuffer = image.planes[1].bytes;
+  Uint8List vBuffer = image.planes[2].bytes;
+
+  List<int> rgbPixels = List.filled(width * height * 3, 0);
+
+  int uvIndex = 0;
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      int yIndex = y * yRowStride + x;
+
+      int yValue = yBuffer[yIndex] & 0xFF;
+      int uValue = uBuffer[uvIndex] & 0xFF;
+      int vValue = vBuffer[uvIndex] & 0xFF;
+
+      if (x % 2 == 1) {
+        uvIndex += uvPixelStride;
+      }
+
+      int r = (yValue + (1.370705 * (vValue - 128))).round().clamp(0, 255);
+      int g = (yValue - (0.698001 * (vValue - 128)) - (0.337633 * (uValue - 128))).round().clamp(0, 255);
+      int b = (yValue + (1.732446 * (uValue - 128))).round().clamp(0, 255);
+
+      int pixelIndex = (y * width + x) * 3;
+      rgbPixels[pixelIndex] = r;
+      rgbPixels[pixelIndex + 1] = g;
+      rgbPixels[pixelIndex + 2] = b;
+    }
+    if (y % 2 == 1) {
+      uvIndex += uvRowStride - (width ~/ 2) * uvPixelStride;
+    }
+  }
+
+  return Uint8List.fromList(rgbPixels);
+}
+
+
+Interpreter? _interpreter;
+bool _isModelLoaded = false;
+void _runInference(CameraImage cameraImage) async {
+  if (!_isModelLoaded) return;
+
+  // Convert CameraImage (YUV420) to RGB
+  Uint8List imageBytes = _convertYUV420toRGB(cameraImage);
+
+  // Resize image to match model input size (e.g., 300x300)
+  img.Image image = img.decodeImage(imageBytes)!;
+  img.Image resizedImage = img.copyResize(image, width: 300, height: 300);
+
+  // Convert image to ByteBuffer (required for TFLite)
+  Uint8List inputBuffer = _imageToByteBuffer(resizedImage);
+
+  // Define output buffer (adjust based on your model’s output)
+  var outputBuffer = List.generate(1, (index) => List.filled(10, 0.0));
+
+  // Run inference
+  _interpreter!.run(inputBuffer, outputBuffer);
+  print('Inference Output: $outputBuffer');
+
+  // Process and display results
+  _processResults(outputBuffer);
 }
 
 class _CameraScreenState extends State<CameraScreen> {
@@ -93,7 +165,9 @@ class _CameraScreenState extends State<CameraScreen> {
           previewRatio = previewSize!.width / previewSize!.height;
         });
 
-        await _controller!.startImageStream(_processCameraImage);
+        await _controller!.startImageStream(
+            _processCameraImage
+        );
       }
     } catch (e) {
       debugPrint('Error initializing camera: $e');
