@@ -8,14 +8,20 @@ import 'package:path/path.dart' as path;
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
-
 import 'package:computer_vision_app/screens/gallery_screen.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
+  Interpreter? _interpreter;
+  bool _isModelLoaded = false;
+  List<Map<String, dynamic>> _detections = [];
+  //const CameraScreen({super.key});
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
+  //super.iniState();
+  //_loadModel();
 }
 
 Uint8List _imageToByteBuffer(img.Image image) {
@@ -81,38 +87,41 @@ Uint8List _convertYUV420toRGB(CameraImage image) {
   return Uint8List.fromList(rgbPixels);
 }
 
-
 Interpreter? _interpreter;
 bool _isModelLoaded = false;
-void _runInference(CameraImage cameraImage) async {
-  if (!_isModelLoaded) return;
 
-  // Convert CameraImage (YUV420) to RGB
-  Uint8List imageBytes = _convertYUV420toRGB(cameraImage);
+//void _runInference(CameraImage cameraImage) async {
+  //if (!_isModelLoaded) return;
 
-  // Resize image to match model input size (e.g., 300x300)
-  img.Image image = img.decodeImage(imageBytes)!;
-  img.Image resizedImage = img.copyResize(image, width: 300, height: 300);
+  //Uint8List imageBytes = _convertYUV420toRGB(cameraImage);
 
-  // Convert image to ByteBuffer (required for TFLite)
-  Uint8List inputBuffer = _imageToByteBuffer(resizedImage);
+  //img.Image image = img.decodeImage(imageBytes)!;
+  //img.Image resizedImage = img.copyResize(image, width: 300, height: 300);
 
-  // Define output buffer (adjust based on your model’s output)
-  var outputBuffer = List.generate(1, (index) => List.filled(10, 0.0));
+  //Uint8List inputBuffer = _imageToByteBuffer(resizedImage);
 
-  // Run inference
-  _interpreter!.run(inputBuffer, outputBuffer);
-  List<Map<String, dynamic>> detections = _postProcessResults(outputBuffer);
+  //var outputBuffer = List.generate(1, (index) => List.filled(10, 0.0));
 
-  if (mounted) {
-    setState(() {
-      _detections = detections;
-    });
-  }
+  //_interpreter!.run(inputBuffer, outputBuffer);
+  //List<Map<String, dynamic>> detections = _postProcessResults(outputBuffer);
 
-  if (_detections.isNotEmpty) {
-    _captureAndSaveImage(); // Capture image if detection is found
-  }
+  //if (mounted) {
+    //setState(() {
+      //_detections = detections;
+    //});
+  //}
+
+  //if (_detections.isNotEmpty) {
+    //_captureAndSaveImage(); // Capture image if detection is found
+  //}
+  //List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
+    // Process model output (Example: returning dummy detection data)
+    //return output.map((o) => {'label': 'Object', 'confidence': o[0]}).toList();
+  //}
+
+//}
+List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
+  return output.map((o) => {'label': 'Object', 'confidence': o[0]}).toList();
 }
 
 class _CameraScreenState extends State<CameraScreen> {
@@ -124,7 +133,41 @@ class _CameraScreenState extends State<CameraScreen> {
   List<dynamic> _detections = [];
   bool _isCapturing = false;
   final cloudinary = CloudinaryPublic('daq0tdpcm', 'flutterr', cache: false);
+  //List<Map<String, dynamic>> _detections = [];
 
+  void _runInference(CameraImage cameraImage) async {
+    if (!_isModelLoaded) return;
+
+    Uint8List imageBytes = _convertYUV420toRGB(cameraImage);
+
+    img.Image image = img.decodeImage(imageBytes)!;
+    img.Image resizedImage = img.copyResize(image, width: 300, height: 300);
+
+    Uint8List inputBuffer = _imageToByteBuffer(resizedImage);
+
+    var outputBuffer = List.generate(1, (index) => List.filled(10, 0.0));
+
+    _interpreter!.run(inputBuffer, outputBuffer);
+    List<Map<String, dynamic>> detections = _postProcessResults(outputBuffer);
+
+    if (mounted) {
+      setState(() {
+        _detections = detections;
+      });
+    }
+
+    if (_detections.isNotEmpty) {
+      _captureAndSaveImage(); // Capture image if detection is found
+    }
+    //List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
+    // Process model output (Example: returning dummy detection data)
+    //return output.map((o) => {'label': 'Object', 'confidence': o[0]}).toList();
+    //}
+
+  }
+  List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
+    return output.map((o) => {'label': 'Object', 'confidence': o[0]}).toList();
+  }
 
   // Coordinate transformation
   Size? previewSize;
@@ -146,19 +189,12 @@ class _CameraScreenState extends State<CameraScreen> {
     _loadModel();
   }
 
-
-  //Future<void> _loadModel() async {
-   // try {
-      //final options = InterpreterOptions();
-      //_interpreter = await Interpreter.fromAsset(modelPath, options: options);
-      //debugPrint('Model loaded successfully');
-    //} catch (e) {
-      //debugPrint('Error loading model: $e');
-    //}
-  //}
   Future<void> _loadModel() async {
     try {
       _interpreter = await Interpreter.fromAsset('best.tflite');
+      setState(() {
+        _isModelLoaded = true;
+      });
       debugPrint("Model loaded successfully");
     } catch (e) {
       debugPrint("Error loading model: $e");
@@ -240,18 +276,21 @@ class _CameraScreenState extends State<CameraScreen> {
 
 
   Future<List<Map<String, dynamic>>> _detectWeeds(CameraImage image) async {
+    if (_interpreter == null) return [];
+
     final inputArray = await _preProcessImage(image);
-
     final outputShape = _interpreter.getOutputTensor(0).shape;
-    final outputBuffer = List<double>.filled(outputShape.reduce((a, b) => a * b), 0);
+    final outputBuffer = List.filled(outputShape[0], List.filled(outputShape[1],0.0));
 
-    final inputs = [inputArray];
-    final outputs = [outputBuffer];
-
-    _interpreter.run(inputs, outputs);
-
-    return _postProcessResults(outputs[0]);
+    try {
+      _interpreter!.run(inputArray, outputBuffer);
+      return _postProcessResults(outputBuffer[0]);
+    } catch (e) {
+      debugPrint('Inference error: $e');
+      return [];
+    }
   }
+
 
   Future<List<List<List<List<double>>>>> _preProcessImage(CameraImage image) async {
     final inputSize = 640;
@@ -294,8 +333,10 @@ class _CameraScreenState extends State<CameraScreen> {
       final double w = outputs[i * 7 + 2];
       final double h = outputs[i * 7 + 3];
       final double confidence = outputs[i * 7 + 4];
-      if (confidence > 0.01) {
-        final int classIndex = outputs.sublist(i * 7 + 5, i * 7 + 7).indexOf(outputs[i * 7 + 5]);
+
+      if (confidence > confidenceThreshold) {
+        final int classIndex = outputs.sublist(i * 7 + 5, i * 7 + 7)
+            .indexOf(outputs[i * 7 + 5]);
 
         detections.add({
           'box': [xCenter, yCenter, w, h],
