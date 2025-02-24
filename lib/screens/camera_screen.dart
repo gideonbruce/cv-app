@@ -87,7 +87,7 @@ Uint8List _convertYUV420toRGB(CameraImage image) {
 Interpreter? _interpreter;
 bool _isModelLoaded = false;
 
-class _CameraScreenState extends State<CameraScreen> {
+class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver {
   CameraController? _controller;
   List<CameraDescription> cameras = [];
   bool _isInitialized = false;
