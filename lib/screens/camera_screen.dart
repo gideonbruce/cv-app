@@ -188,7 +188,7 @@ class _CameraScreenState extends State<CameraScreen> {
       await _controller!.initialize();
 
       if (mounted) {
-        setState(() {
+        setState(() =>
           _isInitialized = true);
         await _controller!.startImageStream(_throttledImageProcessor);
           //previewSize = Size(
@@ -207,7 +207,13 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  //Throttled image processor
+      //Throttled image processor
+  void _throttledImageProcessor(CameraImage image) {
+      final now = DateTime.now();
+      if (now.difference(_lastProcessTime) < minProcessInterval) return;
+      _lastProcessTime = now;
+      _processCameraImage(image);
+  }
 
   // Method to transform coordinates
   Rect _transformBoundingBox(List<double> box, Size size) {
