@@ -106,7 +106,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   List<Map<String, dynamic>> _detections = [];
 
-  DateTime _lastCaptureTime = DateTime.now().subtract(captureInterval);
+  DateTime _lastCaptureTime = DateTime.now().subtract(const Duration(seconds: 2));
   //DateTime _lastProcessTime = DateTime.now();
 
   static const Duration minCaptureInterval = Duration(seconds: 2);
@@ -136,12 +136,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     if (_detections.isNotEmpty) {
       _captureAndSaveImage(); // Capture image if detection is found
     }
-
-
   }
-  //List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
-    //return output.map((o) => {'label': 'Object', 'confidence': o[0]}).toList();
-  //}
 
   // Coordinate transformation
   Size? previewSize;
@@ -362,8 +357,9 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
     final List<Map<String, dynamic>> detections = [];
+    final numBoxes = output[0].length;
 
-    for (int i = 0; i < 8400; i++) {
+    for (int i = 0; i < numBoxes; i++) {
       final double confidence = output[4][i]; // Confidence score
 
       if (confidence > confidenceThreshold) {
@@ -385,33 +381,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
     return detections;
   }
-
-
-  /*List<Map<String, dynamic>> _postProcessResults(List<double> outputs) {
-    final List<Map<String, dynamic>> detections = [];
-    final int numDetections = outputs.length ~/ 7;
-
-    for (int i = 0; i < numDetections; i++) {
-      final double xCenter = outputs[i + 7];
-      final double yCenter = outputs[i * 7 + 1];
-      final double w = outputs[i * 7 + 2];
-      final double h = outputs[i * 7 + 3];
-      final double confidence = outputs[i * 7 + 4];
-
-      if (confidence > confidenceThreshold) {
-        final int classIndex = outputs.sublist(i * 7 + 5, i * 7 + 7)
-            .indexOf(outputs[i * 7 + 5]);
-
-        detections.add({
-          'box': [xCenter, yCenter, w, h],
-          'confidence': confidence,
-          'label': labels[classIndex],
-        });
-      }
-    }
-
-    return detections;
-  }*/
 
   Future<void> _captureAndSaveImage() async {
     if (_isCapturing) return;
