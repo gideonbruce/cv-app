@@ -397,6 +397,8 @@ class _CameraScreenState extends State<CameraScreen> {
 
       final String imagePath = path.join(weedDirectory.path, 'weed_$timestamp.jpg');
       await File(image.path).copy(imagePath);
+
+      _uploadToCloudinary(imagePath, timestamp);
     }
     {
 
