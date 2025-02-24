@@ -147,7 +147,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   // YOLO model configurations
   final modelPath = 'assets/best.tflite';
-  final labels = ['weed'];
+  final labels = ['crop', 'weed'];
   final inputSize = 416;
   final confidenceThreshold = 0.3;
 
@@ -587,10 +587,10 @@ class BoundingBoxPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.green
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+    final Map<String, Color> classColors = {
+      'crop': Colors.blue,
+      'weed': Colors.red,
+    };
 
     final labelPaint = Paint()
       ..color = Colors.black.withOpacity(0.5)
