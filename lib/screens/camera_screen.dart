@@ -147,7 +147,7 @@ class _CameraScreenState extends State<CameraScreen> {
   final modelPath = 'assets/best.tflite';
   final labels = ['weed'];
   final inputSize = 416;
-  final confidenceThreshold = 0.005;
+  final confidenceThreshold = 0.25;
 
   @override
   void initState() {
