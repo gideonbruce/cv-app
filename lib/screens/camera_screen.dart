@@ -95,8 +95,15 @@ class _CameraScreenState extends State<CameraScreen> {
   bool _isBusy = false;
   //List<dynamic> _detections = [];
   bool _isCapturing = false;
+
   final cloudinary = CloudinaryPublic('daq0tdpcm', 'flutterr', cache: false);
+
   List<Map<String, dynamic>> _detections = [];
+  DateTime _lastCaptureTime = DateTime.now();
+  DateTime _lastProcessTime = DateTime.now();
+
+  static const Duration minCaptureInterval = Duration(seconds: 2);
+  static const Duration minProcessInterval = Duration(milliseconds: 500);
 
   void _runInference(CameraImage cameraImage) async {
     if (!_isModelLoaded) return;
