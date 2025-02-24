@@ -160,6 +160,17 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    if (state == AppLifecycleState.inactive) {
+      _stopCamera();
+    } else if (state == AppLifecycleState.resumed) {
+      _initializeCamera();
+    }
+  }
+
+  
 
   Future<void> _loadModel() async {
     try {
