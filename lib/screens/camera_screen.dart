@@ -382,8 +382,24 @@ class _CameraScreenState extends State<CameraScreen> {
   }*/
 
   Future<void> _captureAndSaveImage() async {
-    if (_isCapturing || _controller == null || !_controller!.value.isInitialized) {
-      return;
+    if (_isCapturing) return;
+    _isCapturing = true;
+
+    try {
+      final XFile image = await _controller!.takePicture();
+      final directory = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final weedDirectory = Directory('${directory.path}/weed_images');
+
+      if (!await weedDirectory.exists()) {
+        await weedDirectory.create();
+      }
+
+      final String imagePath = path.join(weedDirectory.path, 'weed_$timestamp.jpg');
+      await File(image.path).copy(imagePath);
+    }
+    {
+
     }
 
     setState(() {
