@@ -524,6 +524,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.pop(context),
                     ),
+                    
                     Text(
                       '${_detections.length} weeds detected',
                       style: const TextStyle(color: Colors.white, fontSize: 16),
