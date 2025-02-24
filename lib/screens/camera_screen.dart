@@ -95,15 +95,18 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   bool _isBusy = false;
   //List<dynamic> _detections = [];
   bool _isCapturing = false;
+  CameraImage? _latestImage;
+  Timer? _processingTimer;
 
   final cloudinary = CloudinaryPublic('daq0tdpcm', 'flutterr', cache: false);
 
   List<Map<String, dynamic>> _detections = [];
-  DateTime _lastCaptureTime = DateTime.now();
+
+  DateTime _lastCaptureTime = DateTime.now().subtract(captureInterval);
   DateTime _lastProcessTime = DateTime.now();
 
   static const Duration minCaptureInterval = Duration(seconds: 2);
-  static const Duration minProcessInterval = Duration(milliseconds: 500);
+  static const Duration minProcessInterval = Duration(seconds: 3);
 
   void _runInference(CameraImage cameraImage) async {
     if (!_isModelLoaded) return;
@@ -147,7 +150,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   final modelPath = 'assets/best.tflite';
   final labels = ['weed'];
   final inputSize = 416;
-  final confidenceThreshold = 0.25;
+  final confidenceThreshold = 0.3;
 
   @override
   void initState() {
@@ -155,6 +158,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     _initializeCamera();
     _loadModel();
   }
+
+  @override
 
   Future<void> _loadModel() async {
     try {
