@@ -414,7 +414,42 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  Futer
+  //separate method for background upload
+  Future<void> _uploadToCloudinary(String imagePath, int timestamp) async {
+    try {
+      final response = await cloudinary.uploadFile(
+        CloudinaryFile.fromFile(imagePath, resourceType: CloudinaryResourceType.Image),
+      );
+
+      final metadataPath = path.join(
+        path.dirname(imagePath),
+        'weed_${timestamp}_metadata.json'
+      );
+
+      await File(metadataPath).writeAsString('''
+        {
+          "timestamp": "$timestamp",
+          "cloudinary_url": "${response.secureUrl}",
+          "detections": ${_detections.map((d) => {
+            "confidence": d['confidence'],
+            "box": d['box'],
+            "label": d['label']
+          }).toList()}
+        }
+      ''');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Uploaded: ${path.basename(imagePath)}'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Upload error: $e');
+    }
+  }
 
   @override
   void dispose() {
