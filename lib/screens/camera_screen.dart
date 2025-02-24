@@ -601,6 +601,13 @@ class BoundingBoxPainter extends CustomPainter {
       final confidence = detection['confidence'] as double;
       final label = detection['label'] as String;
 
+      // setting color based on class
+      final paint = Paint()
+        ..color = classColors[label] ?? Colors.green
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0
+      ;
+
       final rect = Rect.fromLTWH(
         box[0] * size.width,
         box[1] * size.height,
