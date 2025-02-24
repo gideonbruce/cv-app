@@ -170,7 +170,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
   }
 
-  
+  void _stopCamera() {
+    _processingTimer?.cancel();
+    _controller?.stopImageStream();
+    _controller?.dispose();
+    _controller = null;
+  }
 
   Future<void> _loadModel() async {
     try {
