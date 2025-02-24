@@ -189,22 +189,25 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (mounted) {
         setState(() {
-          _isInitialized = true;
-          previewSize = Size(
-            _controller!.value.previewSize!.height,
-            _controller!.value.previewSize!.width,
-          );
-          previewRatio = previewSize!.width / previewSize!.height;
-        });
+          _isInitialized = true);
+        await _controller!.startImageStream(_throttledImageProcessor);
+          //previewSize = Size(
+            //_controller!.value.previewSize!.height,
+            //_controller!.value.previewSize!.width,
+          //);
+          //previewRatio = previewSize!.width / previewSize!.height;
+        //});
 
-        await _controller!.startImageStream(
-            _processCameraImage
-        );
+        //await _controller!.startImageStream(
+           // _processCameraImage
+        //);
       }
     } catch (e) {
       debugPrint('Error initializing camera: $e');
     }
   }
+
+  //Throttled image processor
 
   // Method to transform coordinates
   Rect _transformBoundingBox(List<double> box, Size size) {
