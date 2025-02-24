@@ -175,12 +175,23 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
   }
 
-  void _stopCamera() {
+  Future<void> _stopCamera() async {
+    _processingTimer?.cancel();
+    if (_controller != null) {
+      if (_controller!.value.isStreamingImages) {
+        await _controller!.stopImageStream();
+      }
+      await _controller!.dispose();
+      _controller = null;
+    }
+  }
+
+  /*void _stopCamera() {
     _processingTimer?.cancel();
     _controller?.stopImageStream();
     _controller?.dispose();
     _controller = null;
-  }
+  }*/
 
   Future<void> _loadModel() async {
     try {
