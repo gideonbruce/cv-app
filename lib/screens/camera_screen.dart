@@ -524,11 +524,23 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.pop(context),
                     ),
-                    
-                    Text(
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Crops: ${_detections.where((d) => d['label'] == 'crop').length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                        Text(
+                          'Weeds: ${_detections.where((d) => d['label'] == 'weed').length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                    /*Text(
                       '${_detections.length} weeds detected',
                       style: const TextStyle(color: Colors.white, fontSize: 16),
-                    ),
+                    ),*/
                     IconButton(
                       icon: const Icon(Icons.folder, color: Colors.white),
                       onPressed: () {
