@@ -414,6 +414,8 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
+  Futer
+
   @override
   void dispose() {
     _controller?.dispose();
