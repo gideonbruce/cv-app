@@ -245,10 +245,14 @@ class _CameraScreenState extends State<CameraScreen> {
       // Run inference
       final detections = await _detectWeeds(image);
       if (mounted) {
-        setState(() {
-          _detections = detections;
-        });
-        if (_detections.isNotEmpty) {
+        setState(() =>
+          _detections = detections);
+
+        final now = DateTime.now();
+        if (detections.isNotEmpty &&
+            now.difference(_lastCaptureTime) >= minCaptureInterval
+        ) {
+          _lastCaptureTime = now;
           _captureAndSaveImage();
         }
       }
@@ -257,7 +261,7 @@ class _CameraScreenState extends State<CameraScreen> {
     } finally {
       _isBusy = false;
     }
-    _isBusy = false;
+    //_isBusy = false;
   }
 
 
@@ -271,7 +275,7 @@ class _CameraScreenState extends State<CameraScreen> {
         1,
           (_) => List.generate(
             6,
-              (_) => List.filled(8400, 0.0),
+              (_) => List.filled(8400, 0.0)
           ),
       );
 
