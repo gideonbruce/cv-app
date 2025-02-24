@@ -158,6 +158,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _loadModel() async {
     try {
+      final options = InterpreterOptions()..threads = 4;
       _interpreter = await Interpreter.fromAsset('assets/best.tflite');
       setState(() {
         _isModelLoaded = true;
