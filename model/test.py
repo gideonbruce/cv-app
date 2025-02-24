@@ -68,7 +68,7 @@ def draw_detections(image, boxes, scores, class_ids):
 
 def main():
     model_path = "best.tflite" 
-    image_path = "C:\\Users\\Bruce\\Desktop\\New folder (3)\\New folder\\roboflow_dataset\\test\\images\\rgb-2022-10-10-15-59-07_jpg.rf.8ae69326ccba4d7108ca493a30b6e03c.jpg"
+    image_path = "C:\\Users\\Bruce\\Desktop\\New folder (3)\\New folder\\roboflow_dataset\\train\\images\\rgb-2022-10-06-17-17-35_jpg.rf.3986ac3a5a305de0ddb1c32c65e270c9.jpg"
     input_size = (640, 640)  
     
     interpreter = load_tflite_model(model_path)

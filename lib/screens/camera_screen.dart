@@ -2,20 +2,18 @@ import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
-import 'package:image/image.dart' as img_lib;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:computer_vision_app/screens/gallery_screen.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
-  Interpreter? _interpreter;
-  bool _isModelLoaded = false;
-  List<Map<String, dynamic>> _detections = [];
+  //Interpreter? _interpreter;
+  //bool _isModelLoaded = false;
+  //List<Map<String, dynamic>> _detections = [];
   //const CameraScreen({super.key});
 
   @override
@@ -42,7 +40,6 @@ Uint8List _imageToByteBuffer(img.Image image) {
 
   return buffer;
 }
-
 
 Uint8List _convertYUV420toRGB(CameraImage image) {
   final int width = image.width;
@@ -90,50 +87,16 @@ Uint8List _convertYUV420toRGB(CameraImage image) {
 Interpreter? _interpreter;
 bool _isModelLoaded = false;
 
-//void _runInference(CameraImage cameraImage) async {
-  //if (!_isModelLoaded) return;
-
-  //Uint8List imageBytes = _convertYUV420toRGB(cameraImage);
-
-  //img.Image image = img.decodeImage(imageBytes)!;
-  //img.Image resizedImage = img.copyResize(image, width: 300, height: 300);
-
-  //Uint8List inputBuffer = _imageToByteBuffer(resizedImage);
-
-  //var outputBuffer = List.generate(1, (index) => List.filled(10, 0.0));
-
-  //_interpreter!.run(inputBuffer, outputBuffer);
-  //List<Map<String, dynamic>> detections = _postProcessResults(outputBuffer);
-
-  //if (mounted) {
-    //setState(() {
-      //_detections = detections;
-    //});
-  //}
-
-  //if (_detections.isNotEmpty) {
-    //_captureAndSaveImage(); // Capture image if detection is found
-  //}
-  //List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
-    // Process model output (Example: returning dummy detection data)
-    //return output.map((o) => {'label': 'Object', 'confidence': o[0]}).toList();
-  //}
-
-//}
-List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
-  return output.map((o) => {'label': 'Object', 'confidence': o[0]}).toList();
-}
-
 class _CameraScreenState extends State<CameraScreen> {
   CameraController? _controller;
   List<CameraDescription> cameras = [];
   bool _isInitialized = false;
   late Interpreter _interpreter;
   bool _isBusy = false;
-  List<dynamic> _detections = [];
+  //List<dynamic> _detections = [];
   bool _isCapturing = false;
   final cloudinary = CloudinaryPublic('daq0tdpcm', 'flutterr', cache: false);
-  //List<Map<String, dynamic>> _detections = [];
+  List<Map<String, dynamic>> _detections = [];
 
   void _runInference(CameraImage cameraImage) async {
     if (!_isModelLoaded) return;
@@ -147,7 +110,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
     var outputBuffer = List.generate(1, (index) => List.filled(10, 0.0));
 
-    _interpreter!.run(inputBuffer, outputBuffer);
+    _interpreter!.run(inputBuffer, outputBuffer);  //matching output buffer
     List<Map<String, dynamic>> detections = _postProcessResults(outputBuffer);
 
     if (mounted) {
@@ -159,15 +122,12 @@ class _CameraScreenState extends State<CameraScreen> {
     if (_detections.isNotEmpty) {
       _captureAndSaveImage(); // Capture image if detection is found
     }
-    //List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
-    // Process model output (Example: returning dummy detection data)
-    //return output.map((o) => {'label': 'Object', 'confidence': o[0]}).toList();
-    //}
+
 
   }
-  List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
-    return output.map((o) => {'label': 'Object', 'confidence': o[0]}).toList();
-  }
+  //List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
+    //return output.map((o) => {'label': 'Object', 'confidence': o[0]}).toList();
+  //}
 
   // Coordinate transformation
   Size? previewSize;
@@ -191,7 +151,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _loadModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('best.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/best.tflite');
       setState(() {
         _isModelLoaded = true;
       });
@@ -266,11 +226,20 @@ class _CameraScreenState extends State<CameraScreen> {
 
     try {
       // Run inference
-      _runInference(image);
+      final detections = await _detectWeeds(image);
+      if (mounted) {
+        setState(() {
+          _detections = detections;
+        });
+        if (_detections.isNotEmpty) {
+          _captureAndSaveImage();
+        }
+      }
     } catch (e) {
       debugPrint('Error processing image: $e');
+    } finally {
+      _isBusy = false;
     }
-
     _isBusy = false;
   }
 
@@ -278,12 +247,21 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<List<Map<String, dynamic>>> _detectWeeds(CameraImage image) async {
     if (_interpreter == null) return [];
 
-    final inputArray = await _preProcessImage(image);
-    final outputShape = _interpreter.getOutputTensor(0).shape;
-    final outputBuffer = List.filled(outputShape[0], List.filled(outputShape[1],0.0));
-
     try {
+      final inputArray = await _preProcessImage(image);
+
+      final outputBuffer = List.generate(
+        1,
+          (_) => List.generate(
+            6,
+              (_) => List.filled(8400, 0.0),
+          ),
+      );
+
+      //run inference
       _interpreter!.run(inputArray, outputBuffer);
+
+      //process output tensor
       return _postProcessResults(outputBuffer[0]);
     } catch (e) {
       debugPrint('Inference error: $e');
@@ -291,12 +269,13 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-
   Future<List<List<List<List<double>>>>> _preProcessImage(CameraImage image) async {
     final inputSize = 640;
-    final inputArray = List.generate(inputSize, (_) =>
+    final inputArray = List.generate(1, (_) =>
         List.generate(inputSize, (_) =>
-            List.generate(3, (_) => 0.0)
+            List.generate(inputSize, (_) =>
+                List.generate(3, (_) => 0.0)
+            )
         )
     );
 
@@ -306,24 +285,56 @@ class _CameraScreenState extends State<CameraScreen> {
     for (int y = 0; y < image.height; y++) {
       for (int x = 0; x < image.width; x++) {
         final pixel = bytes[y * stride + x];
-        final r = (pixel & 0xFF0000) >> 16;
-        final g = (pixel & 0x00FF00) >> 8;
-        final b = (pixel & 0x0000FF);
 
+        /*final r = (pixel & 0xFF0000) >> 16;
+        final g = (pixel & 0x00FF00) >> 8;
+        final b = (pixel & 0x0000FF);*/
+
+        // scaled coordinates
         final newX = (x * inputSize / image.width).toInt();
         final newY = (y * inputSize / image.height).toInt();
 
-        inputArray[newY][newX][0] = r / 255.0;
-        inputArray[newY][newX][1] = g / 255.0;
-        inputArray[newY][newX][2] = b / 255.0;
+
+        if (newX < inputSize && newY < inputSize) {
+          inputArray[0][newY][newX][0] = (pixel & 0xFF) / 255.0; //R
+          inputArray[0][newY][newX][1] = ((pixel >> 8) & 0xFF) / 255.0; //G
+          inputArray[0][newY][newX][2] = ((pixel >> 16) & 0xFF) / 255.0; //B
+        }
 
       }
     }
 
-    return [inputArray];
+    return inputArray;
   }
 
-  List<Map<String, dynamic>> _postProcessResults(List<double> outputs) {
+  List<Map<String, dynamic>> _postProcessResults(List<List<double>> output) {
+    final List<Map<String, dynamic>> detections = [];
+
+    for (int i = 0; i < 8400; i++) {
+      final double confidence = output[4][i]; // Confidence score
+
+      if (confidence > confidenceThreshold) {
+        final double x = output[0][i]; // X-coordinate of the box
+        final double y = output[1][i]; // Y-coordinate of the box
+        final double w = output[2][i]; // Width of the box
+        final double h = output[3][i]; // Height of the box
+
+        final double classScore = output[5][i];
+
+        detections.add({
+          'box': [x, y, w, h],
+          'confidence': confidence,
+          'label': labels[0],
+          'class_score': classScore
+        });
+      }
+    }
+
+    return detections;
+  }
+
+
+  /*List<Map<String, dynamic>> _postProcessResults(List<double> outputs) {
     final List<Map<String, dynamic>> detections = [];
     final int numDetections = outputs.length ~/ 7;
 
@@ -347,7 +358,7 @@ class _CameraScreenState extends State<CameraScreen> {
     }
 
     return detections;
-  }
+  }*/
 
   Future<void> _captureAndSaveImage() async {
     if (_isCapturing || _controller == null || !_controller!.value.isInitialized) {
@@ -612,6 +623,3 @@ class BoundingBoxPainter extends CustomPainter {
       detections != oldDelegate.detections;
 
 }
-
-
-
