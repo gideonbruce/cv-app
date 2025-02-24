@@ -5,6 +5,8 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:computer_vision_app/screens/gallery_screen.dart';
@@ -93,17 +95,19 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   bool _isInitialized = false;
   late Interpreter _interpreter;
   bool _isBusy = false;
-  //List<dynamic> _detections = [];
+  bool _isModelLoaded = false;
   bool _isCapturing = false;
   CameraImage? _latestImage;
   Timer? _processingTimer;
+
+  late DateTime _lastProcessTime = DateTime.now();
 
   final cloudinary = CloudinaryPublic('daq0tdpcm', 'flutterr', cache: false);
 
   List<Map<String, dynamic>> _detections = [];
 
   DateTime _lastCaptureTime = DateTime.now().subtract(captureInterval);
-  DateTime _lastProcessTime = DateTime.now();
+  //DateTime _lastProcessTime = DateTime.now();
 
   static const Duration minCaptureInterval = Duration(seconds: 2);
   static const Duration minProcessInterval = Duration(seconds: 3);
@@ -155,6 +159,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeCamera();
     _loadModel();
   }
@@ -179,12 +184,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   Future<void> _loadModel() async {
     try {
-      final options = InterpreterOptions()..threads = 4;
-      _interpreter = await Interpreter.fromAsset('assets/best.tflite');
-      setState(() {
-        _isModelLoaded = true;
-      });
-      debugPrint("Model loaded successfully");
+      final options = InterpreterOptions()
+        ..threads = 4;
+        //..useNnapi = true;
+
+      _interpreter = await Interpreter.fromAsset('assets/best.tflite', options: options);
+      if (mounted) setState(() => _isModelLoaded = true);
+      debugPrint("Model Loaded succesfully");
+
     } catch (e) {
       debugPrint("Error loading model: $e");
     }
@@ -192,6 +199,9 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
 
   Future<void> _initializeCamera() async {
+
+    await _stopCamera();
+
     try {
       cameras = await availableCameras();
       final backCamera = cameras.firstWhere(
@@ -212,16 +222,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         setState(() =>
           _isInitialized = true);
         await _controller!.startImageStream(_throttledImageProcessor);
-          //previewSize = Size(
-            //_controller!.value.previewSize!.height,
-            //_controller!.value.previewSize!.width,
-          //);
-          //previewRatio = previewSize!.width / previewSize!.height;
-        //});
-
-        //await _controller!.startImageStream(
-           // _processCameraImage
-        //);
       }
     } catch (e) {
       debugPrint('Error initializing camera: $e');
@@ -435,6 +435,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
   }
 
+  void _scheduledUpload(String imagePath, int timestamp) {
+    Future.delayed(const Duration(seconds: 2), () {
+      _uploadToCloudinary(imagePath, timestamp);
+    });
+  }
+
   //separate method for background upload
   Future<void> _uploadToCloudinary(String imagePath, int timestamp) async {
     try {
@@ -474,6 +480,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _processingTimer?.cancel();
     _controller?.dispose();
     _interpreter.close();
     super.dispose();
@@ -513,8 +521,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                   painter: BoundingBoxPainter(
                     detections: _detections,
                     previewSize: Size(constraints.maxWidth, constraints.maxHeight),
-                    isLandscape: isLandscape,
-                    transformBoundingBox: _transformBoundingBox,
+                    isLandscape: MediaQuery.of(context).orientation == Orientation.landscape,
+                    //transformBoundingBox: _transformBoundingBox,
                   ),
                 );
               },
@@ -588,13 +596,13 @@ class BoundingBoxPainter extends CustomPainter {
   final List<dynamic> detections;
   final Size previewSize;
   final bool isLandscape;
-  final Function(List<double>, Size) transformBoundingBox;
+  //final Function(List<double>, Size) transformBoundingBox;
 
   BoundingBoxPainter({
     required this.detections,
     required this.previewSize,
     required this.isLandscape,
-    required this.transformBoundingBox,
+    //required this.transformBoundingBox,
   });
 
   @override
@@ -612,14 +620,13 @@ class BoundingBoxPainter extends CustomPainter {
       final box = detection['box'] as List<double>;
       final confidence = detection['confidence'] as double;
       final label = detection['label'] as String;
-      //final rect = Rect.fromLTWH(
-      //box[0] * size.width,
-      //box[1] * size.height,
-      //box[2] * size.width,
-      //box[3] * size.height,
-      //);
 
-      final rect = transformBoundingBox(box, size);
+      final rect = Rect.fromLTWH(
+        box[0] * size.width,
+        box[1] * size.height,
+        box[2] * size.width,
+        box[3] * size.height,
+      );
 
       //draw bounding box
       canvas.drawRect(rect, paint);
